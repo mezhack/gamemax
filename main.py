@@ -1,4 +1,4 @@
-import pygame
+import pygame,random
 import sys
 
 # Inicialização
@@ -15,22 +15,28 @@ VERDE_HEROI = (50, 220, 100)
 VERMELHO_GUARDA = (230, 50, 50)
 AMARELO_CHAVE = (255, 215, 0)
 AZUL_PORTA = (50, 130, 240)
-CINZA_PAREDE = (100, 100, 110)
+CINZA_PAREDE = (32, 124, 72)
 BRANCO = (255, 255, 255)
 
 # Entidades do Jogo
 heroi = pygame.Rect(60, 60, 35, 35)
 velocidade_heroi = 5
+guarda_preso=False
+guarda_preso_2=False
 
 guarda = pygame.Rect(380, 250, 40, 40)
 velocidade_guarda = 4
 direcao_guarda = 1  # 1 = desce, -1 = sobe
 
+guarda_2 = pygame.Rect(402, 200, 18, 18)
+velocidade_guarda_2 = 10
+direcao_guarda_2 = -1
+
 chave = pygame.Rect(700, 80, 20, 20)
 porta = pygame.Rect(720, 500, 45, 65)
 
 # TODO (Missão do Aluno): Adicione aqui uma lista de paredes/obstáculos!
-obstaculos = []
+obstaculos = [(400, 80, 200, 20),(200, 40, 20, 200),(5, 10, 42, 21)]
 
 # Estados do Jogo
 pegou_chave = False
@@ -48,7 +54,8 @@ while True:
             status_jogo = "JOGANDO"
 
     if status_jogo == "JOGANDO":
-        # Movimentação do Herói
+        pah_x,pah_y=heroi.x,heroi.y
+        #posição_anterior_heroi
         teclas = pygame.key.get_pressed()
         dx, dy = 0, 0
         if teclas[pygame.K_LEFT] or teclas[pygame.K_a]:
@@ -63,17 +70,46 @@ while True:
         # Atualiza posição mantendo dentro da tela
         heroi.x = max(0, min(LARGURA - heroi.width, heroi.x + dx))
         heroi.y = max(0, min(ALTURA - heroi.height, heroi.y + dy))
+        for paredes in obstaculos:
+            if heroi.colliderect(paredes):
+                print("colidiu")
+                heroi.x, heroi.y = pah_x, pah_y
 
         # Patrulha vertical do Guarda
+        #posição_anterior_guarda
+
+        pag_x,pag_y=guarda.x,guarda.y
+        if guarda_preso == True:
+            guarda.x+=(velocidade_guarda*random.randint(-1,1))
+            guarda.y+=(velocidade_guarda*random.randint(-1,1))
+            guarda_preso=False
         guarda.y += velocidade_guarda * direcao_guarda
+        for paredes in obstaculos:
+            if guarda.colliderect(paredes):
+                guarda.x,guarda.y = pag_x,pag_y
+                guarda_preso=True
         if guarda.top <= 40 or guarda.bottom >= ALTURA - 40:
             direcao_guarda *= -1
+
+        pag2_x,pag2_y = guarda_2.x,guarda_2.y
+        if guarda_preso_2 == True:
+            guarda_2.x+=(velocidade_guarda_2*random.randint(-1,1))
+            guarda_2.y+=(velocidade_guarda_2*random.randint(-1,1))
+            guarda_preso_2=False
+        guarda_2.x += velocidade_guarda_2 * direcao_guarda_2
+        for paredes in obstaculos:
+            if guarda_2.colliderect(paredes):
+                guarda_2.x,guarda_2.y = pag2_x,pag2_y
+                print("colidiy")
+                guarda_preso_2=True
+        if guarda_2.left <= 18 or guarda_2.right >= LARGURA - 18:
+            direcao_guarda_2 *= -1
 
         # Colisões
         if not pegou_chave and heroi.colliderect(chave):
             pegou_chave = True
 
-        if heroi.colliderect(guarda):
+        if heroi.colliderect(guarda)or heroi.colliderect(guarda_2):
             status_jogo = "PERDEU"
 
         if pegou_chave and heroi.colliderect(porta):
@@ -94,6 +130,7 @@ while True:
     # Desenha Herói e Guarda
     pygame.draw.rect(tela, VERDE_HEROI, heroi)
     pygame.draw.rect(tela, VERMELHO_GUARDA, guarda)
+    pygame.draw.rect(tela, VERMELHO_GUARDA, guarda_2)
 
     # HUD / Interface
     texto_chave = "Chave: OK!" if pegou_chave else "Chave: Pendente"
