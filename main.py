@@ -1,5 +1,6 @@
 import pygame
 import sys
+import math
 
 # Inicialização
 pygame.init()
@@ -22,15 +23,26 @@ BRANCO = (255, 255, 255)
 heroi = pygame.Rect(60, 60, 35, 35)
 velocidade_heroi = 5
 
-guarda = pygame.Rect(380, 250, 40, 40)
+#guarda = pygame.Rect(380, 400, 40, 40)
+# Configuração do Guarda e Rota
+rota_guarda = [(180, 460), (620, 460), (620, 60), (180, 60)]
+ponto_atual = 0
+
+guarda = pygame.Rect(0, 0, 40, 40)
+guarda.center = rota_guarda[0]  # Nasce na parte de baixo à esquerda
 velocidade_guarda = 4
-direcao_guarda = 1  # 1 = desce, -1 = sobe
 
-chave = pygame.Rect(700, 80, 20, 20)
-porta = pygame.Rect(720, 500, 45, 65)
 
-# TODO (Missão do Aluno): Adicione aqui uma lista de paredes/obstáculos!
-obstaculos = []
+chave = pygame.Rect(400, 340, 20, 20)
+porta = pygame.Rect(735, 20, 45, 65)
+
+#(Missão do Aluno): Adicione aqui uma lista de paredes/obstáculos!
+obstaculos = [pygame.Rect(250, 250, 300, 30),
+pygame.Rect(250, 250, 30,150 ),
+pygame.Rect(530, 250, 30, 150),
+pygame.Rect(710, 0, 10, 150),
+pygame.Rect(790, 0, 10, 150),
+pygame.Rect(710, 0, 100, 10)]
 
 # Estados do Jogo
 pegou_chave = False
@@ -44,8 +56,11 @@ while True:
         # Reiniciar com a tecla R
         if evento.type == pygame.KEYDOWN and evento.key == pygame.K_r:
             heroi.topleft = (60, 60)
+            ponto_atual = 0
+            guarda.center = rota_guarda[0]
             pegou_chave = False
             status_jogo = "JOGANDO"
+
 
     if status_jogo == "JOGANDO":
         # Movimentação do Herói
@@ -61,13 +76,40 @@ while True:
             dy = velocidade_heroi
 
         # Atualiza posição mantendo dentro da tela
+                # 1. Move no eixo X e checa colisão com as paredes
         heroi.x = max(0, min(LARGURA - heroi.width, heroi.x + dx))
+        for parede in obstaculos:
+            if heroi.colliderect(parede):
+                if dx > 0:  # Estava indo para a direita
+                    heroi.right = parede.left
+                elif dx < 0:  # Estava indo para a esquerda
+                    heroi.left = parede.right
+
+        # 2. Move no eixo Y e checa colisão com as paredes
         heroi.y = max(0, min(ALTURA - heroi.height, heroi.y + dy))
+        for parede in obstaculos:
+            if heroi.colliderect(parede):
+                if dy > 0:  # Estava descendo
+                    heroi.bottom = parede.top
+                elif dy < 0:  # Estava subindo
+                    heroi.top = parede.bottom
+
 
         # Patrulha vertical do Guarda
-        guarda.y += velocidade_guarda * direcao_guarda
-        if guarda.top <= 40 or guarda.bottom >= ALTURA - 40:
-            direcao_guarda *= -1
+                # Patrulha vertical do Guarda
+                # Patrulha ao redor do mapa (Waypoints)
+        alvo_x, alvo_y = rota_guarda[ponto_atual]
+        dx_g = alvo_x - guarda.centerx
+        dy_g = alvo_y - guarda.centery
+        distancia = math.hypot(dx_g, dy_g)
+
+        if distancia <= velocidade_guarda:
+            guarda.center = (alvo_x, alvo_y)
+            ponto_atual = (ponto_atual + 1) % len(rota_guarda)  # Vai para o próximo ponto em loop
+        else:
+            guarda.x += round((dx_g / distancia) * velocidade_guarda)
+            guarda.y += round((dy_g / distancia) * velocidade_guarda)
+
 
         # Colisões
         if not pegou_chave and heroi.colliderect(chave):
