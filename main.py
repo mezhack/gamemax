@@ -1,5 +1,7 @@
+
 import pygame
 import sys
+import random
 
 # Inicialização
 pygame.init()
@@ -29,8 +31,12 @@ direcao_guarda = 1  # 1 = desce, -1 = sobe
 chave = pygame.Rect(700, 80, 20, 20)
 porta = pygame.Rect(720, 500, 45, 65)
 
-# TODO (Missão do Aluno): Adicione aqui uma lista de paredes/obstáculos!
-obstaculos = []
+# Três paredes maiores em posições aleatórias
+obstaculos = [
+    pygame.Rect(random.randint(150, 600), random.randint(100, 450), 150, 40),
+    pygame.Rect(random.randint(150, 600), random.randint(100, 400), 40, 160),
+    pygame.Rect(random.randint(150, 600), random.randint(100, 450), 180, 40)
+]
 
 # Estados do Jogo
 pegou_chave = False
@@ -41,11 +47,19 @@ while True:
         if evento.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
+
         # Reiniciar com a tecla R
         if evento.type == pygame.KEYDOWN and evento.key == pygame.K_r:
             heroi.topleft = (60, 60)
             pegou_chave = False
             status_jogo = "JOGANDO"
+
+            # Gera três novas paredes em posições aleatórias
+            obstaculos = [
+                pygame.Rect(random.randint(150, 600), random.randint(100, 450), 150, 40),
+                pygame.Rect(random.randint(150, 600), random.randint(100, 400), 40, 160),
+                pygame.Rect(random.randint(150, 600), random.randint(100, 450), 180, 40)
+            ]
 
     if status_jogo == "JOGANDO":
         # Movimentação do Herói
@@ -62,12 +76,46 @@ while True:
 
         # Atualiza posição mantendo dentro da tela
         heroi.x = max(0, min(LARGURA - heroi.width, heroi.x + dx))
+
+        # Colisão horizontal com as paredes
+        for parede in obstaculos:
+            if heroi.colliderect(parede):
+                if dx > 0:
+                    heroi.right = parede.left
+                elif dx < 0:
+                    heroi.left = parede.right
+
         heroi.y = max(0, min(ALTURA - heroi.height, heroi.y + dy))
+
+        # Colisão vertical com as paredes
+        for parede in obstaculos:
+            if heroi.colliderect(parede):
+                if dy > 0:
+                    heroi.bottom = parede.top
+                elif dy < 0:
+                    heroi.top = parede.bottom
 
         # Patrulha vertical do Guarda
         guarda.y += velocidade_guarda * direcao_guarda
-        if guarda.top <= 40 or guarda.bottom >= ALTURA - 40:
-            direcao_guarda *= -1
+
+        # Colisão do Guarda com as paredes
+        for parede in obstaculos:
+            if guarda.colliderect(parede):
+                if direcao_guarda > 0:
+                    guarda.bottom = parede.top
+                else:
+                    guarda.top = parede.bottom
+
+                direcao_guarda *= -1
+
+        # Limites da patrulha do Guarda
+        if guarda.top <= 40:
+            guarda.top = 40
+            direcao_guarda = 1
+
+        elif guarda.bottom >= ALTURA - 40:
+            guarda.bottom = ALTURA - 40
+            direcao_guarda = -1
 
         # Colisões
         if not pegou_chave and heroi.colliderect(chave):
@@ -87,7 +135,7 @@ while True:
     if not pegou_chave:
         pygame.draw.rect(tela, AMARELO_CHAVE, chave)
 
-    # Desenha Obstáculos (quando implementados)
+    # Desenha Obstáculos
     for parede in obstaculos:
         pygame.draw.rect(tela, CINZA_PAREDE, parede)
 
