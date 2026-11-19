@@ -1,111 +1,298 @@
 import pygame
-import sys
+import pgzrun
+import random
+import math
 
-# Inicialização
-pygame.init()
-LARGURA, ALTURA = 800, 600
-tela = pygame.display.set_mode((LARGURA, ALTURA))
-pygame.display.set_caption("Operação Stealth - Edição Colaborativa")
-relogio = pygame.time.Clock()
-fonte = pygame.font.SysFont("arial", 24, bold=True)
+WIDTH = 800
+HEIGHT = 600
+TITLE = "Meu primeiro jogo em Pygame"
 
-# Cores (R, G, B)
-PRETO = (20, 20, 25)
-VERDE_HEROI = (50, 220, 100)
-VERMELHO_GUARDA = (230, 50, 50)
-AMARELO_CHAVE = (255, 215, 0)
-AZUL_PORTA = (50, 130, 240)
-CINZA_PAREDE = (100, 100, 110)
-BRANCO = (255, 255, 255)
+VIDA = 3
+pontos = 0
+PONTOS_VITORIA = 10
+estado_jogo = "JOGANDO"
 
-# Entidades do Jogo
-heroi = pygame.Rect(60, 60, 35, 35)
-velocidade_heroi = 5
+paredes = [
+    Rect((180, 140), (30, 220)),
+    Rect((580, 240), (30, 220)),
+    Rect((300, 460), (200, 30))
+]
 
-guarda = pygame.Rect(380, 250, 40, 40)
-velocidade_guarda = 4
-direcao_guarda = 1  # 1 = desce, -1 = sobe
+heroi = Actor("imagem_64x64")
+heroi.pos = (400, 300)
 
-chave = pygame.Rect(700, 80, 20, 20)
-porta = pygame.Rect(720, 500, 45, 65)
+Moeda = Actor("moeda_64x64")
 
-# TODO (Missão do Aluno): Adicione aqui uma lista de paredes/obstáculos!
-obstaculos = []
+inimigo = Actor("cachorro_minion_64x64")
+inimigo.pos = (
+    random.randint(50, WIDTH - 50),
+    random.randint(50, HEIGHT - 50)
+)
 
-# Estados do Jogo
-pegou_chave = False
-status_jogo = "JOGANDO"  # Pode ser: "JOGANDO", "VENCEU", "PERDEU"
 
-while True:
-    for evento in pygame.event.get():
-        if evento.type == pygame.QUIT:
-            pygame.quit()
-            sys.exit()
-        # Reiniciar com a tecla R
-        if evento.type == pygame.KEYDOWN and evento.key == pygame.K_r:
-            heroi.topleft = (60, 60)
-            pegou_chave = False
-            status_jogo = "JOGANDO"
+def posicionar_moeda():
+    while True:
+        Moeda.pos = (
+            random.randint(50, WIDTH - 50),
+            random.randint(50, HEIGHT - 50)
+        )
+        if not any(Moeda.colliderect(p) for p in paredes):
+            break
 
-    if status_jogo == "JOGANDO":
-        # Movimentação do Herói
-        teclas = pygame.key.get_pressed()
-        dx, dy = 0, 0
-        if teclas[pygame.K_LEFT] or teclas[pygame.K_a]:
-            dx = -velocidade_heroi
-        if teclas[pygame.K_RIGHT] or teclas[pygame.K_d]:
-            dx = velocidade_heroi
-        if teclas[pygame.K_UP] or teclas[pygame.K_w]:
-            dy = -velocidade_heroi
-        if teclas[pygame.K_DOWN] or teclas[pygame.K_s]:
-            dy = velocidade_heroi
 
-        # Atualiza posição mantendo dentro da tela
-        heroi.x = max(0, min(LARGURA - heroi.width, heroi.x + dx))
-        heroi.y = max(0, min(ALTURA - heroi.height, heroi.y + dy))
+posicionar_moeda()
 
-        # Patrulha vertical do Guarda
-        guarda.y += velocidade_guarda * direcao_guarda
-        if guarda.top <= 40 or guarda.bottom >= ALTURA - 40:
-            direcao_guarda *= -1
+estado_inimigo = "PATRULHANDO"
+direcao_patrulha = "DIREITA"
+tempo_sem_ver = 0
+TEMPO_INVESTIGACAO = 3.0
+RAIO_VISAO = 180
+ultima_posicao_heroi = None
+direcao_investigacao = 1
 
-        # Colisões
-        if not pegou_chave and heroi.colliderect(chave):
-            pegou_chave = True
 
-        if heroi.colliderect(guarda):
-            status_jogo = "PERDEU"
+def distancia(a, b):
+    return math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2)
 
-        if pegou_chave and heroi.colliderect(porta):
-            status_jogo = "VENCEU"
 
-    # Renderização
-    tela.fill(PRETO)
+def heroi_na_visao():
+    return distancia(inimigo, heroi) <= RAIO_VISAO
 
-    # Desenha Porta e Chave
-    pygame.draw.rect(tela, AZUL_PORTA, porta)
-    if not pegou_chave:
-        pygame.draw.rect(tela, AMARELO_CHAVE, chave)
 
-    # Desenha Obstáculos (quando implementados)
-    for parede in obstaculos:
-        pygame.draw.rect(tela, CINZA_PAREDE, parede)
+def colidiu_parede(ator):
+    for parede in paredes:
+        if ator.colliderect(parede):
+            return True
+    return False
 
-    # Desenha Herói e Guarda
-    pygame.draw.rect(tela, VERDE_HEROI, heroi)
-    pygame.draw.rect(tela, VERMELHO_GUARDA, guarda)
 
-    # HUD / Interface
-    texto_chave = "Chave: OK!" if pegou_chave else "Chave: Pendente"
-    hud = fonte.render(texto_chave, True, BRANCO)
-    tela.blit(hud, (20, 15))
+def patrulhar():
+    global direcao_patrulha
+    velocidade = 2
+    x_antigo, y_antigo = inimigo.x, inimigo.y
 
-    if status_jogo == "PERDEU":
-        msg = fonte.render("CAPTURADO! Pressione R para tentar novamente.", True, VERMELHO_GUARDA)
-        tela.blit(msg, (140, ALTURA // 2))
-    elif status_jogo == "VENCEU":
-        msg = fonte.render("ESCAPOU COM SUCESSO! Pressione R para jogar.", True, VERDE_HEROI)
-        tela.blit(msg, (140, ALTURA // 2))
+    if direcao_patrulha == "DIREITA":
+        inimigo.x += velocidade
+        if inimigo.x >= WIDTH - 50 or colidiu_parede(inimigo):
+            inimigo.x = x_antigo
+            direcao_patrulha = "BAIXO"
 
-    pygame.display.flip()
-    relogio.tick(60)
+    elif direcao_patrulha == "BAIXO":
+        inimigo.y += velocidade
+        if inimigo.y >= HEIGHT - 50 or colidiu_parede(inimigo):
+            inimigo.y = y_antigo
+            direcao_patrulha = "ESQUERDA"
+
+    elif direcao_patrulha == "ESQUERDA":
+        inimigo.x -= velocidade
+        if inimigo.x <= 50 or colidiu_parede(inimigo):
+            inimigo.x = x_antigo
+            direcao_patrulha = "CIMA"
+
+    elif direcao_patrulha == "CIMA":
+        inimigo.y -= velocidade
+        if inimigo.y <= 50 or colidiu_parede(inimigo):
+            inimigo.y = y_antigo
+            direcao_patrulha = "DIREITA"
+
+
+def perseguir():
+    velocidade = 2.5
+    dx = heroi.x - inimigo.x
+    dy = heroi.y - inimigo.y
+    distancia_total = math.sqrt(dx ** 2 + dy ** 2)
+
+    if distancia_total > 0:
+        x_antigo = inimigo.x
+        inimigo.x += (dx / distancia_total) * velocidade
+        if colidiu_parede(inimigo):
+            inimigo.x = x_antigo
+
+        y_antigo = inimigo.y
+        inimigo.y += (dy / distancia_total) * velocidade
+        if colidiu_parede(inimigo):
+            inimigo.y = y_antigo
+
+
+def investigar():
+    global direcao_investigacao
+    velocidade = 1.5
+    x_antigo = inimigo.x
+
+    inimigo.x += velocidade * direcao_investigacao
+
+    if inimigo.x >= WIDTH - 50 or colidiu_parede(inimigo):
+        inimigo.x = x_antigo
+        direcao_investigacao = -1
+        inimigo.y += 30
+    elif inimigo.x <= 50 or colidiu_parede(inimigo):
+        inimigo.x = x_antigo
+        direcao_investigacao = 1
+        inimigo.y += 30
+
+    inimigo.x = max(50, min(WIDTH - 50, inimigo.x))
+    inimigo.y = max(50, min(HEIGHT - 50, inimigo.y))
+
+
+def reiniciar_jogo():
+    global pontos, VIDA, estado_jogo, estado_inimigo
+    pontos = 0
+    VIDA = 3
+    estado_jogo = "JOGANDO"
+    estado_inimigo = "PATRULHANDO"
+    heroi.pos = (400, 300)
+    inimigo.pos = (random.randint(50, WIDTH - 50), random.randint(50, HEIGHT - 50))
+    posicionar_moeda()
+
+
+def draw():
+    screen.fill((0, 20, 255))
+
+    if estado_jogo == "JOGANDO":
+        cor_visao = (255, 50, 50) if estado_inimigo == "PERSEGUINDO" else (100, 100, 255)
+        screen.draw.circle(inimigo.pos, RAIO_VISAO, cor_visao)
+
+        for parede in paredes:
+            screen.draw.filled_rect(parede, (120, 130, 150))
+            screen.draw.rect(parede, "white")
+
+        if estado_inimigo == "PERSEGUINDO":
+            status_alerta = "ALERTA: INIMIGO TE VIU!"
+            cor_texto = "crimson"
+        else:
+            status_alerta = "Status: Oculto"
+            cor_texto = "lime"
+
+        screen.draw.text(
+            status_alerta,
+            midbottom=(WIDTH // 2, HEIGHT - 15),
+            fontsize=22,
+            color=cor_texto
+        )
+
+        heroi.draw()
+        inimigo.draw()
+        Moeda.draw()
+
+    elif estado_jogo == "VITORIA":
+        screen.draw.text(
+            "VOCÊ ESCAPOU COM SUCESSO!",
+            center=(WIDTH // 2, 250),
+            fontsize=50,
+            color="gold"
+        )
+        screen.draw.text(
+            "Pressione [R] para jogar novamente",
+            center=(WIDTH // 2, 350),
+            fontsize=30,
+            color="white"
+        )
+
+    elif estado_jogo == "GAMEOVER":
+        screen.draw.text(
+            "GAME OVER",
+            center=(WIDTH // 2, 220),
+            fontsize=64,
+            color="crimson",
+            shadow=(2, 2),
+            scolor="black"
+        )
+        screen.draw.text(
+            "Pressione [R] para reiniciar",
+            center=(WIDTH // 2, 320),
+            fontsize=30,
+            color="white"
+        )
+
+    screen.draw.text(
+        f"Pontos: {pontos}/{PONTOS_VITORIA} | Vidas: {VIDA}",
+        topleft=(20, 20),
+        fontsize=32,
+        color="white",
+        shadow=(1, 1),
+        scolor="black"
+    )
+
+
+def update(dt):
+    global pontos, estado_inimigo, tempo_sem_ver, ultima_posicao_heroi, estado_jogo, VIDA
+
+    if estado_jogo in ["VITORIA", "GAMEOVER"]:
+        if keyboard.r:
+            reiniciar_jogo()
+        return
+
+    if keyboard.right:
+        heroi.x += 3
+        if colidiu_parede(heroi):
+            heroi.x -= 3
+    if keyboard.left:
+        heroi.x -= 3
+        if colidiu_parede(heroi):
+            heroi.x += 3
+    if keyboard.up:
+        heroi.y -= 3
+        if colidiu_parede(heroi):
+            heroi.y += 3
+    if keyboard.down:
+        heroi.y += 3
+        if colidiu_parede(heroi):
+            heroi.y -= 3
+
+    heroi.x = max(32, min(WIDTH - 32, heroi.x))
+    heroi.y = max(32, min(HEIGHT - 32, heroi.y))
+
+    viu_heroi = heroi_na_visao()
+
+    if viu_heroi:
+        estado_inimigo = "PERSEGUINDO"
+        ultima_posicao_heroi = (heroi.x, heroi.y)
+        tempo_sem_ver = 0
+        perseguir()
+    else:
+        if estado_inimigo == "PERSEGUINDO":
+            tempo_sem_ver += dt
+
+            if ultima_posicao_heroi is not None:
+                dx = ultima_posicao_heroi[0] - inimigo.x
+                dy = ultima_posicao_heroi[1] - inimigo.y
+                dist = math.sqrt(dx ** 2 + dy ** 2)
+
+                if dist > 10:
+                    x_antigo = inimigo.x
+                    inimigo.x += (dx / dist) * 2
+                    if colidiu_parede(inimigo):
+                        inimigo.x = x_antigo
+
+                    y_antigo = inimigo.y
+                    inimigo.y += (dy / dist) * 2
+                    if colidiu_parede(inimigo):
+                        inimigo.y = y_antigo
+
+            if tempo_sem_ver >= TEMPO_INVESTIGACAO:
+                estado_inimigo = "INVESTIGANDO"
+                tempo_sem_ver = 0
+
+        elif estado_inimigo == "INVESTIGANDO":
+            investigar()
+        else:
+            estado_inimigo = "PATRULHANDO"
+            patrulhar()
+
+    if heroi.colliderect(Moeda):
+        pontos += 1
+        posicionar_moeda()
+
+        if pontos >= PONTOS_VITORIA:
+            estado_jogo = "VITORIA"
+
+    if inimigo.colliderect(heroi):
+        VIDA -= 1
+        heroi.x = 400
+        heroi.y = 300
+
+        if VIDA <= 0:
+            estado_jogo = "GAMEOVER"
+
+
+pgzrun.go()
