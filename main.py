@@ -30,7 +30,13 @@ chave = pygame.Rect(700, 80, 20, 20)
 porta = pygame.Rect(720, 500, 45, 65)
 
 # TODO (Missão do Aluno): Adicione aqui uma lista de paredes/obstáculos!
-obstaculos = []
+obstaculos = [
+    pygame.Rect(150, 100, 200, 30),
+    pygame.Rect(500, 150, 30, 200),
+    pygame.Rect(100, 300, 250, 30),
+    pygame.Rect(500, 400, 200, 30),
+    pygame.Rect(250, 450, 30, 100)
+    ]
 
 # Estados do Jogo
 pegou_chave = False
@@ -60,12 +66,41 @@ while True:
         if teclas[pygame.K_DOWN] or teclas[pygame.K_s]:
             dy = velocidade_heroi
 
-        # Atualiza posição mantendo dentro da tela
-        heroi.x = max(0, min(LARGURA - heroi.width, heroi.x + dx))
-        heroi.y = max(0, min(ALTURA - heroi.height, heroi.y + dy))
+        # Atualiza posição com colisão nas paredes
+        heroi.x += dx
 
-        # Patrulha vertical do Guarda
+        for parede in obstaculos:
+            if heroi.colliderect(parede):
+                if dx > 0:
+                    heroi.right = parede.left
+                elif dx < 0:
+                    heroi.left = parede.right
+
+        heroi.y += dy
+
+        for parede in obstaculos:
+            if heroi.colliderect(parede):
+                if dy > 0:
+                    heroi.bottom = parede.top
+                elif dy < 0:
+                    heroi.top = parede.bottom
+
+        # Mantém dentro da tela
+        heroi.x = max(0, min(LARGURA - heroi.width, heroi.x))
+        heroi.y = max(0, min(ALTURA - heroi.height, heroi.y))
+
+        # Patrulha vertical do Guarda com colisão nas paredes
         guarda.y += velocidade_guarda * direcao_guarda
+
+        for parede in obstaculos:
+            if guarda.colliderect(parede):
+                if direcao_guarda == 1:
+                    guarda.bottom = parede.top
+                else:
+                    guarda.top = parede.bottom
+
+                direcao_guarda *= -1
+
         if guarda.top <= 40 or guarda.bottom >= ALTURA - 40:
             direcao_guarda *= -1
 
