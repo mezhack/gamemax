@@ -29,8 +29,12 @@ direcao_guarda = 1  # 1 = desce, -1 = sobe
 chave = pygame.Rect(700, 80, 20, 20)
 porta = pygame.Rect(720, 500, 45, 65)
 
-# TODO (Missão do Aluno): Adicione aqui uma lista de paredes/obstáculos!
-obstaculos = []
+# 3 paredes/obstáculos adicionados (x, y, largura, altura)
+obstaculos = [
+    pygame.Rect(200, 0, 30, 380),    # Parede 1: Esquerda (vem de cima)
+    pygame.Rect(550, 220, 30, 380),  # Parede 2: Direita (vem de baixo)
+    pygame.Rect(230, 350, 120, 30)   # Parede 3: Bloco horizontal no meio
+]
 
 # Estados do Jogo
 pegou_chave = False
@@ -60,9 +64,23 @@ while True:
         if teclas[pygame.K_DOWN] or teclas[pygame.K_s]:
             dy = velocidade_heroi
 
-        # Atualiza posição mantendo dentro da tela
+        # Move no eixo X e verifica colisão com as paredes
         heroi.x = max(0, min(LARGURA - heroi.width, heroi.x + dx))
+        for parede in obstaculos:
+            if heroi.colliderect(parede):
+                if dx > 0:  # Indo para a direita
+                    heroi.right = parede.left
+                elif dx < 0:  # Indo para a esquerda
+                    heroi.left = parede.right
+
+        # Move no eixo Y e verifica colisão com as paredes
         heroi.y = max(0, min(ALTURA - heroi.height, heroi.y + dy))
+        for parede in obstaculos:
+            if heroi.colliderect(parede):
+                if dy > 0:  # Indo para baixo
+                    heroi.bottom = parede.top
+                elif dy < 0:  # Indo para cima
+                    heroi.top = parede.bottom
 
         # Patrulha vertical do Guarda
         guarda.y += velocidade_guarda * direcao_guarda
@@ -87,7 +105,7 @@ while True:
     if not pegou_chave:
         pygame.draw.rect(tela, AMARELO_CHAVE, chave)
 
-    # Desenha Obstáculos (quando implementados)
+    # Desenha Obstáculos
     for parede in obstaculos:
         pygame.draw.rect(tela, CINZA_PAREDE, parede)
 
