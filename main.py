@@ -143,4 +143,5 @@ while True:
         tela.blit(msg, (140, ALTURA // 2))
 
     pygame.display.flip()
+
     relogio.tick(60)
