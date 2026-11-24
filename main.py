@@ -109,3 +109,39 @@ while True:
 
     pygame.display.flip()
     relogio.tick(60)
+
+
+# Movimentação do Herói
+teclas = pygame.key.get_pressed()
+dx, dy = 0, 0
+
+if teclas[pygame.K_LEFT] or teclas[pygame.K_a]:
+    dx = -velocidade_heroi
+if teclas[pygame.K_RIGHT] or teclas[pygame.K_d]:
+    dx = velocidade_heroi
+if teclas[pygame.K_UP] or teclas[pygame.K_w]:
+    dy = -velocidade_heroi
+if teclas[pygame.K_DOWN] or teclas[pygame.K_s]:
+    dy = velocidade_heroi
+
+# Movimento horizontal e colisão
+heroi.x += dx
+for parede in obstaculos:
+    if heroi.colliderect(parede):
+        if dx > 0:
+            heroi.right = parede.left
+        elif dx < 0:
+            heroi.left = parede.right
+
+# Movimento vertical e colisão
+heroi.y += dy
+for parede in obstaculos:
+    if heroi.colliderect(parede):
+        if dy > 0:
+            heroi.bottom = parede.top
+        elif dy < 0:
+            heroi.top = parede.bottom
+
+# Mantém o herói dentro da tela
+heroi.x = max(0, min(LARGURA - heroi.width, heroi.x))
+heroi.y = max(0, min(ALTURA - heroi.height, heroi.y))
