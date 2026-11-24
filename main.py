@@ -24,33 +24,42 @@ velocidade_heroi = 5
 
 guarda = pygame.Rect(380, 250, 40, 40)
 velocidade_guarda = 4
-direcao_guarda = 1  # 1 = desce, -1 = sobe
+direcao_guarda = 1
 
 chave = pygame.Rect(700, 80, 20, 20)
 porta = pygame.Rect(720, 500, 45, 65)
 
-# TODO (Missão do Aluno): Adicione aqui uma lista de paredes/obstáculos!
-obstaculos = []
+# ALTERAÇÃO 1: Criação das 3 paredes
+obstaculos = [
+    pygame.Rect(180, 150, 250, 25),
+    pygame.Rect(500, 180, 30, 220),
+    pygame.Rect(180, 420, 250, 30)
+]
 
 # Estados do Jogo
 pegou_chave = False
-status_jogo = "JOGANDO"  # Pode ser: "JOGANDO", "VENCEU", "PERDEU"
+status_jogo = "JOGANDO"
 
 while True:
     for evento in pygame.event.get():
         if evento.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
+
         # Reiniciar com a tecla R
         if evento.type == pygame.KEYDOWN and evento.key == pygame.K_r:
             heroi.topleft = (60, 60)
+            guarda.topleft = (380, 250)
+            direcao_guarda = 1
             pegou_chave = False
             status_jogo = "JOGANDO"
 
     if status_jogo == "JOGANDO":
+
         # Movimentação do Herói
         teclas = pygame.key.get_pressed()
         dx, dy = 0, 0
+
         if teclas[pygame.K_LEFT] or teclas[pygame.K_a]:
             dx = -velocidade_heroi
         if teclas[pygame.K_RIGHT] or teclas[pygame.K_d]:
@@ -60,12 +69,30 @@ while True:
         if teclas[pygame.K_DOWN] or teclas[pygame.K_s]:
             dy = velocidade_heroi
 
-        # Atualiza posição mantendo dentro da tela
+        # ALTERAÇÃO 2: Colisão horizontal do herói
         heroi.x = max(0, min(LARGURA - heroi.width, heroi.x + dx))
+
+        for parede in obstaculos:
+            if heroi.colliderect(parede):
+                heroi.x = heroi.x - dx
+
+        # ALTERAÇÃO 3: Colisão vertical do herói
         heroi.y = max(0, min(ALTURA - heroi.height, heroi.y + dy))
+
+        for parede in obstaculos:
+            if heroi.colliderect(parede):
+                heroi.y = heroi.y - dy
 
         # Patrulha vertical do Guarda
         guarda.y += velocidade_guarda * direcao_guarda
+
+        # ALTERAÇÃO 4: Colisão do guarda com as paredes
+        for parede in obstaculos:
+            if guarda.colliderect(parede):
+                guarda.y -= velocidade_guarda * direcao_guarda
+                direcao_guarda *= -1
+                break
+
         if guarda.top <= 40 or guarda.bottom >= ALTURA - 40:
             direcao_guarda *= -1
 
@@ -84,10 +111,11 @@ while True:
 
     # Desenha Porta e Chave
     pygame.draw.rect(tela, AZUL_PORTA, porta)
+
     if not pegou_chave:
         pygame.draw.rect(tela, AMARELO_CHAVE, chave)
 
-    # Desenha Obstáculos (quando implementados)
+    # Desenha Obstáculos
     for parede in obstaculos:
         pygame.draw.rect(tela, CINZA_PAREDE, parede)
 
@@ -103,6 +131,7 @@ while True:
     if status_jogo == "PERDEU":
         msg = fonte.render("CAPTURADO! Pressione R para tentar novamente.", True, VERMELHO_GUARDA)
         tela.blit(msg, (140, ALTURA // 2))
+
     elif status_jogo == "VENCEU":
         msg = fonte.render("ESCAPOU COM SUCESSO! Pressione R para jogar.", True, VERDE_HEROI)
         tela.blit(msg, (140, ALTURA // 2))
