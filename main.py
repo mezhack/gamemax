@@ -1,5 +1,6 @@
 import pygame
 import sys
+import math
 
 # Inicialização
 pygame.init()
@@ -20,7 +21,7 @@ BRANCO = (255, 255, 255)
 
 # Entidades do Jogo
 heroi = pygame.Rect(60, 60, 35, 35)
-velocidade_heroi = 5
+velocidade_heroi = 1
 
 guarda = pygame.Rect(380, 250, 40, 40)
 velocidade_guarda = 4
@@ -30,7 +31,11 @@ chave = pygame.Rect(700, 80, 20, 20)
 porta = pygame.Rect(720, 500, 45, 65)
 
 # TODO (Missão do Aluno): Adicione aqui uma lista de paredes/obstáculos!
-obstaculos = []
+obstaculos = [pygame.Rect(340,0,20,500),
+pygame.Rect(440,0,20,200),
+pygame.Rect(440,250,20,400)]
+
+
 
 # Estados do Jogo
 pegou_chave = False
@@ -60,6 +65,23 @@ while True:
         if teclas[pygame.K_DOWN] or teclas[pygame.K_s]:
             dy = velocidade_heroi
 
+        heroi.x = max(0, min (LARGURA - heroi.width, heroi.x +dx))
+        for parede in obstaculos:
+            if heroi.colliderect(parede):
+                if dx > 0:
+                    heroi.right = parede.left
+                elif dx < 0:
+                    heroi.left = parede.right
+
+        heroi.y = max (0, min(ALTURA - heroi.height, heroi.y + dy))
+        for parede in obstaculos:
+            if heroi.colliderect(parede):
+                if dy > 0:
+                    heroi.bottom = parede.top
+                elif dy < 0:
+                    heroi.top = parede.bottom
+                    
+
         # Atualiza posição mantendo dentro da tela
         heroi.x = max(0, min(LARGURA - heroi.width, heroi.x + dx))
         heroi.y = max(0, min(ALTURA - heroi.height, heroi.y + dy))
@@ -78,6 +100,8 @@ while True:
 
         if pegou_chave and heroi.colliderect(porta):
             status_jogo = "VENCEU"
+
+
 
     # Renderização
     tela.fill(PRETO)
