@@ -1,3 +1,4 @@
+
 import pygame
 import sys
 
@@ -29,18 +30,23 @@ direcao_guarda = 1  # 1 = desce, -1 = sobe
 chave = pygame.Rect(700, 80, 20, 20)
 porta = pygame.Rect(720, 500, 45, 65)
 
-# TODO (Missão do Aluno): Adicione aqui uma lista de paredes/obstáculos!
-obstaculos = []
+# Paredes e obstáculos
+obstaculos = [
+    pygame.Rect(180, 120, 220, 25),  # Parede 1 - horizontal
+    pygame.Rect(450, 180, 25, 220),  # Parede 2 - vertical
+    pygame.Rect(180, 430, 220, 25)   # Parede 3 - horizontal
+]
 
 # Estados do Jogo
 pegou_chave = False
-status_jogo = "JOGANDO"  # Pode ser: "JOGANDO", "VENCEU", "PERDEU"
+status_jogo = "JOGANDO"
 
 while True:
     for evento in pygame.event.get():
         if evento.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
+
         # Reiniciar com a tecla R
         if evento.type == pygame.KEYDOWN and evento.key == pygame.K_r:
             heroi.topleft = (60, 60)
@@ -48,9 +54,11 @@ while True:
             status_jogo = "JOGANDO"
 
     if status_jogo == "JOGANDO":
+
         # Movimentação do Herói
         teclas = pygame.key.get_pressed()
         dx, dy = 0, 0
+
         if teclas[pygame.K_LEFT] or teclas[pygame.K_a]:
             dx = -velocidade_heroi
         if teclas[pygame.K_RIGHT] or teclas[pygame.K_d]:
@@ -60,22 +68,41 @@ while True:
         if teclas[pygame.K_DOWN] or teclas[pygame.K_s]:
             dy = velocidade_heroi
 
-        # Atualiza posição mantendo dentro da tela
+        # Movimentação horizontal com colisão
         heroi.x = max(0, min(LARGURA - heroi.width, heroi.x + dx))
+
+        for parede in obstaculos:
+            if heroi.colliderect(parede):
+                if dx > 0:
+                    heroi.right = parede.left
+                elif dx < 0:
+                    heroi.left = parede.right
+
+        # Movimentação vertical com colisão
         heroi.y = max(0, min(ALTURA - heroi.height, heroi.y + dy))
+
+        for parede in obstaculos:
+            if heroi.colliderect(parede):
+                if dy > 0:
+                    heroi.bottom = parede.top
+                elif dy < 0:
+                    heroi.top = parede.bottom
 
         # Patrulha vertical do Guarda
         guarda.y += velocidade_guarda * direcao_guarda
+
         if guarda.top <= 40 or guarda.bottom >= ALTURA - 40:
             direcao_guarda *= -1
 
-        # Colisões
+        # Colisões com a chave
         if not pegou_chave and heroi.colliderect(chave):
             pegou_chave = True
 
+        # Colisão com o guarda
         if heroi.colliderect(guarda):
             status_jogo = "PERDEU"
 
+        # Colisão com a porta
         if pegou_chave and heroi.colliderect(porta):
             status_jogo = "VENCEU"
 
@@ -84,10 +111,11 @@ while True:
 
     # Desenha Porta e Chave
     pygame.draw.rect(tela, AZUL_PORTA, porta)
+
     if not pegou_chave:
         pygame.draw.rect(tela, AMARELO_CHAVE, chave)
 
-    # Desenha Obstáculos (quando implementados)
+    # Desenha as três paredes
     for parede in obstaculos:
         pygame.draw.rect(tela, CINZA_PAREDE, parede)
 
@@ -101,10 +129,19 @@ while True:
     tela.blit(hud, (20, 15))
 
     if status_jogo == "PERDEU":
-        msg = fonte.render("CAPTURADO! Pressione R para tentar novamente.", True, VERMELHO_GUARDA)
+        msg = fonte.render(
+            "CAPTURADO! Pressione R para tentar novamente.",
+            True,
+            VERMELHO_GUARDA
+        )
         tela.blit(msg, (140, ALTURA // 2))
+
     elif status_jogo == "VENCEU":
-        msg = fonte.render("ESCAPOU COM SUCESSO! Pressione R para jogar.", True, VERDE_HEROI)
+        msg = fonte.render(
+            "ESCAPOU COM SUCESSO! Pressione R para jogar.",
+            True,
+            VERDE_HEROI
+        )
         tela.blit(msg, (140, ALTURA // 2))
 
     pygame.display.flip()
